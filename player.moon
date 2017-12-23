@@ -7,14 +7,18 @@ class Player
     @frc = 4500
     @onGround = false
     @terminalv = 3000
-    @jumpv = -900
+    @minJumpv = -600
+    @maxJumpv = -1100
+    @jumpv = @minJumpv
     @gravity = 2500
     @world\add self, @x, @y, @width, @height
+    @state = "idle"
 
   update: (dt, world) =>
     @applyGravity dt
     @move dt
     @collide dt, world
+    @updateState!
 
   applyGravity: (dt) =>
     if @yv > @terminalv
@@ -41,6 +45,9 @@ class Player
       elseif @xv < 0
         @xv = @xv + @frc * dt
 
+    if (love.keyboard.isDown("w") or love.keyboard.isDown("space"))and @jumpv > @maxJumpv
+      @jumpv = @jumpv - 1000 * dt
+
   collide: (dt, world) =>
     local futureX, futureY, nextX, nextY, cols, len
     futureX = @x + @xv * dt
@@ -51,15 +58,41 @@ class Player
     for i = 1, len
       local col
       col = cols[i]
-      if col.normal.y == -1 then
+      if col.normal.y == -1 or col.normal.y == 1
         @yv = 0
         @onGround = true
+      if col.normal.x == -1 or col.normal.x == 1
+        @xv = 0
+      if math.abs(col.other.y - @y) < 64
+        if col.normal.x == -1
+          @world\update self, col.other.x - @width, col.other.y - @height - 10
+        elseif col.normal.x == 1
+          @world\update self, col.other.x + @width, col.other.y - @height - 10
 
+      if col.normal.y == -1 and (love.keyboard.isDown("w") or love.keyboard.isDown("space"))
+        if @x + @width > col.other.x + col.other.width
+          @triggerJump!
+        if @x < col.other.x
+          @triggerJump!
     @x, @y = nextX, nextY
 
+  updateState: =>
+    if @yv < 0 and not @onGround
+      @state = "jumping"
+    elseif @yv > 0 and not @onGround
+      @state = "falling"
+    elseif @xv ~= 0 and @onGround
+      @state = "running"
+    elseif @xv == 0 and @onGround
+      @state = "idle"
+
+  triggerJump: =>
+    @yv = @jumpv
+    @jumpv = @minJumpv
+
   jump: (key) =>
-    if key == "w" and @onGround
-      @yv = @jumpv
+    if (key == "w" or key == "space") and @onGround
+      @triggerJump!
 
   draw: =>
     love.graphics.setColor 60, 245, 130, 245

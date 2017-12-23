@@ -1,12 +1,13 @@
 Map = require "map"
 bump = require "bump"
-camera = require "camera"
-cam = camera(0, 0)
 
 world = bump.newWorld 32, 32
 
 Player = require "player"
 player = Player nil, nil, nil, nil, world
+
+Viewport = require "viewport"
+viewport = Viewport!
 -- player = nil
 
 -- world\add player, player.x, player.y, player.width, player.height
@@ -29,16 +30,17 @@ love.graphics.setBackgroundColor 20, 15, 35
 love.load = ->
   love.update = (dt) ->
     player\update dt, world
-    cam\lookAt player.x, player.y
+    viewport\update dt, player.xv, player.yv, player.x, player.y
+    -- print player.yv, player.xv
     -- world\update dt
     -- print true
   love.draw = ->
-    cam\attach!
+    viewport.cam\attach!
     with Map!
       .draw!
     player\draw!
-    cam\detach!
-  love.keypressed = (key) ->
+    viewport.cam\detach!
+  love.keyreleased = (key) ->
     player\jump key
 
     if key == "r"
